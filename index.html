@@ -234,23 +234,8 @@ kbd{font:inherit;font-weight:700;font-size:12.5px;padding:1px 7px;border-radius:
 .feed-ctx span{color:var(--muted);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .feed{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
 .feed::-webkit-scrollbar{display:none}
-.slide{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:6px 24px 20px;max-width:1280px;margin:0 auto;align-items:start}
-/* 左侧播放器与下方介绍卡片（填充宽屏留白） */
-.player-pane{height:100%;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden}
-.player{position:relative;aspect-ratio:16/9;width:100%;flex:none;border-radius:18px;overflow:hidden;background:#0b1018;box-shadow:var(--shadow)}
-.player-intro{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 20px;box-shadow:var(--shadow);overflow-y:auto;display:flex;flex-direction:column;gap:10px}
-.player-intro::-webkit-scrollbar{width:5px}
-.player-intro::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
-.intro-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:none}
-.intro-badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:color-mix(in oklab,var(--sun) 30%,var(--surface));color:var(--warn)}
-.intro-stage-pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:color-mix(in oklab,var(--h) 15%,var(--surface));color:color-mix(in oklab,var(--h) 70%,var(--ink))}
-.intro-headline{font-size:16px;font-weight:800;color:var(--ink);margin:0}
-.intro-reason{font-size:13.5px;line-height:1.65;color:var(--muted);margin:0}
-.intro-box{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.65}
-.caution-box{background:color-mix(in oklab,var(--sun) 14%,var(--surface));color:var(--warn);border:1px solid color-mix(in oklab,var(--sun) 30%,var(--line))}
-.caution-box b{color:var(--warn);font-weight:800}
-.mission-box{background:color-mix(in oklab,var(--h) 10%,var(--surface));color:var(--ink);border:1px solid color-mix(in oklab,var(--h) 25%,var(--line))}
-.mission-box b{color:color-mix(in oklab,var(--h) 80%,var(--ink));font-weight:800}
+.slide{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:12px 24px 20px;max-width:1280px;margin:0 auto;align-content:center;align-items:stretch}
+.player{position:relative;aspect-ratio:16/9;width:100%;height:100%;border-radius:18px;overflow:hidden;background:#0b1018;box-shadow:var(--shadow)}
 .player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;display:block}
 .poster img{opacity:.92}
@@ -344,9 +329,7 @@ body.tv .tv-bar{position:fixed;left:0;right:0;bottom:0;height:60px;z-index:61;di
   .wide-only{display:none!important}
   .touch{display:inline}
   .slide{display:flex;flex-direction:column;gap:0;padding:0;align-items:stretch}
-  .player-pane{height:auto;overflow:visible;gap:0}
-  .player-intro{display:none}
-  .player{flex:none;width:100%;border-radius:0;box-shadow:none}
+  .player{flex:none;width:100%;aspect-ratio:16/9;border-radius:0;box-shadow:none}
   .info{flex:1;height:auto;border:0;border-radius:0;background:var(--bg)}
   .info-scroll{padding:14px 16px 6px}
   .slide h2{font-size:18px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -861,19 +844,7 @@ function slideHTML(v, i) {
   ].join('');
   const up = `<a href="${esc(v.channelUrl || v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.channel)}</a>`;
   return `<article class="slide" data-i="${i}" style="--h:${st ? st.hue : 'var(--accent)'}">
-    <div class="player-pane">
-      <div class="player">${posterHTML(v)}</div>
-      <div class="player-intro">
-        <div class="intro-bar">
-          <span class="intro-badge">🌟 4岁半启蒙导读</span>
-          ${st ? `<span class="intro-stage-pill" style="--h:${st.hue}">${esc(st.icon || '')} ${esc(st.name)}</span>` : ''}
-        </div>
-        ${pi ? `<h3 class="intro-headline">${esc(pi.note)}</h3>` : ''}
-        ${v.reason ? `<p class="intro-reason">${esc(v.reason)}</p>` : ''}
-        ${c ? `<div class="intro-box caution-box"><b>💡 亲子观察与互动：</b>${esc(c)}</div>` : ''}
-        ${st && st.mission ? `<div class="intro-box mission-box"><b>🎈 亲子小任务【${esc(st.mission.label)}】：</b>${esc(st.mission.text)}</div>` : ''}
-      </div>
-    </div>
+    <div class="player">${posterHTML(v)}</div>
     <div class="info">
       <div class="info-scroll">
         <div class="badges">${badges}</div>
