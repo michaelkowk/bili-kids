@@ -406,7 +406,7 @@ body.tv .tv-bar{position:fixed;left:0;right:0;bottom:0;height:60px;z-index:61;di
 </head>
 <body>
 <header class="top" id="top">
-  <a class="logo" href="./" id="logo" aria-label="BiliPicks 首页"><span class="mark">▶</span><span class="logo-t">BiliPicks</span></a>
+  <a class="logo" href="./" id="logo" aria-label="BiliPicks 首页"><span class="mark">▶</span><span class="logo-t">BiliPicks Kids 🎈</span></a>
   <nav class="nav" id="nav" aria-label="主导航"></nav>
   <label class="search">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -596,9 +596,17 @@ const lenLabel = v => isSeries(v) ? `共 ${v.parts} 集` : mins(v.duration);
 // 老数据里有写「无」「无明显问题」的家长提示，不显示
 const cautionOf = v => (v.caution && !/^无(明显问题)?$/.test(v.caution.trim())) ? v.caution : '';
 const who = v => v.orig || v.channel;
-const cover = v => v.cover ? `<img class="cover" src="${esc(v.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '';
+const isYT = v => !!(v && (v.platform === 'youtube' || v.yt || (v.id && !v.id.startsWith('BV') && !v.id.startsWith('av'))));
+const ytId = v => v.yt || v.id;
+const cover = v => {
+  const c = isYT(v) ? (v.cover || `https://img.youtube.com/vi/${ytId(v)}/hqdefault.jpg`) : v.cover;
+  return c ? `<img class="cover" src="${esc(c)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '';
+};
 const stagePill = (st, text) => `<span class="stage-pill" style="--h:${st.hue}">${esc(st.icon || '')} ${esc(text)}</span>`;
 function embedUrl(v, autoplay) {
+  if (isYT(v)) {
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(ytId(v))}?autoplay=${autoplay ? 1 : 0}&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`;
+  }
   const p = v.page > 1 ? `&p=${v.page}` : '';
   return `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(v.id)}${p}&high_quality=1&danmaku=0&autoplay=${autoplay ? 1 : 0}&as_wide=1`;
 }

@@ -18,7 +18,7 @@
 html{font-size:1.25vw;background:#0b1220;overflow:hidden}
 body{margin:0;overflow:hidden;height:100vh;color:#eef3fb;background:#0b1220;
   font-family:"PingFang SC","HarmonyOS Sans SC","MiSans","Noto Sans CJK SC","Source Han Sans SC","Microsoft YaHei",system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased;cursor:none}
+  -webkit-font-smoothing:antialiased;cursor:default}
 h1,h2,h3,p{margin:0}
 .bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;
   background:radial-gradient(60rem 30rem at 85% -10%,rgba(47,134,224,.22),transparent 70%),radial-gradient(50rem 30rem at -10% 110%,rgba(160,91,216,.16),transparent 70%),#0b1220}
@@ -127,31 +127,71 @@ h1,h2,h3,p{margin:0}
 .msg{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.4rem;color:#c3cede;text-align:center}
 .msg b{font-size:2rem;color:#fff;margin-bottom:.8rem}
 [hidden]{display:none!important}
+
+/* 鼠标指针与可爱童趣动效 */
+.tile, .card, button, .stage, .big, .duo div, .back-pill, .ctrl-btn { cursor: pointer; }
+.card .tile { border-radius: 1.1rem; transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s; }
+.card:hover .tile, .card.f .tile { transform: scale(1.06); box-shadow: 0 0 0 .25rem #ffc531, 0 .9rem 2.2rem rgba(0,0,0,.6); z-index: 3; }
+.tile.stage:hover, .tile.stage.f { transform: scale(1.05); box-shadow: 0 0 0 .25rem #fff, 0 .9rem 2.2rem rgba(0,0,0,.55); z-index: 3; }
+.big:hover .playbtn, .big.f .playbtn { background: #ffc531; color: #221500; transform: scale(1.15); }
+.playbtn { transition: transform .2s, background .2s; }
+.logo b { background: linear-gradient(135deg, #ffc531, #ff7a45, #70a1ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* 播放器控制栏与返回按钮 */
+.back-pill { display: inline-flex; align-items: center; gap: .5rem; padding: .5rem 1.3rem; border-radius: 2rem; background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.45); color: #fff; font-size: 1.05rem; font-weight: 800; transition: all .2s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.back-pill:hover { background: #ffc531; color: #221500; border-color: #ffc531; transform: scale(1.06); }
+.top-ov-bar { display: flex; align-items: center; gap: 1.2rem; margin-bottom: .6rem; pointer-events: auto; }
+.ctrl-bar { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem; margin-bottom: .8rem; pointer-events: auto; }
+.ctrl-btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1.1rem; border-radius: .8rem; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3); color: #fff; font-size: .95rem; font-weight: 800; transition: all .2s; }
+.ctrl-btn:hover { background: rgba(255,255,255,.35); transform: translateY(-2px); }
+.ctrl-btn.active { background: #0f9457; border-color: #35c986; }
+.ov { pointer-events: none; }
+.ov.top-ov, .ov.bot-ov { pointer-events: auto; }
+.player.quiet .top-ov { opacity: 0; transform: translateY(-1.5rem); pointer-events: none; }
+.player.quiet .bot-ov { opacity: 0; transform: translateY(1.5rem); pointer-events: none; }
+.float-back { position: absolute; left: 2rem; top: 1.5rem; z-index: 10; display: none; opacity: .7; transition: opacity .2s, transform .2s; }
+.float-back:hover { opacity: 1; transform: scale(1.06); }
+.player.quiet .float-back { display: inline-flex; }
+
 </style>
 </head>
 <body>
 <div class="bg"></div>
 <header class="top">
-  <div class="logo"><i>▶</i><b>BiliPicks</b><span id="sub"></span></div>
+  <div class="logo"><i>▶</i><b>BiliPicks Kids</b><span id="sub"></span></div>
   <div class="top-r"><span class="prog" id="prog"></span><span class="clock" id="clock"></span></div>
 </header>
 <main class="home" id="home"></main>
 <div class="msg" id="msg"><b>BiliPicks</b>正在加载…</div>
 
 <section class="player quiet" id="player" hidden>
+  <button class="back-pill float-back" id="btn-float-back" title="返回主页">❮ 返回主页</button>
   <div class="ov top-ov">
-    <span class="pill" id="p-pill"></span>
+    <div class="top-ov-bar">
+      <button class="back-pill" id="btn-back-home" title="返回主页">❮ 返回主页</button>
+      <span class="pill" id="p-pill" style="margin-left:1rem;margin-bottom:0;"></span>
+      <span class="pos" id="p-pos" style="position:static;margin-left:auto;"></span>
+    </div>
     <h2 id="p-title"></h2>
     <p class="who" id="p-who"></p>
-    <span class="pos" id="p-pos"></span>
   </div>
   <div class="ov bot-ov">
-    <div class="keys">
-      <span><kbd>◀</kbd><kbd>▶</kbd><b id="k-lr">上一条 / 下一条</b></span>
-      <span><kbd>OK</kbd>暂停 / 继续</span>
-      <span><kbd>▲</kbd>标记看完</span>
-      <span><kbd>▼</kbd><b id="k-down">选集</b></span>
-      <span><kbd>返回</kbd>回首页</span>
+    <div style="display:flex;flex-direction:column;width:100%;">
+      <div class="ctrl-bar">
+        <button class="ctrl-btn" id="btn-prev">⏮ 上一条</button>
+        <button class="ctrl-btn" id="btn-playpause">⏯ 暂停 / 继续</button>
+        <button class="ctrl-btn" id="btn-mark">⭐ 标记已看</button>
+        <button class="ctrl-btn" id="btn-strip">📑 选集</button>
+        <button class="ctrl-btn" id="btn-next">⏭ 下一条</button>
+        <button class="ctrl-btn active" id="btn-autoplay">🔁 自动连播：开</button>
+      </div>
+      <div class="keys">
+        <span><kbd>◀</kbd><kbd>▶</kbd><b id="k-lr">上一条 / 下一条</b></span>
+        <span><kbd>OK</kbd>暂停 / 继续</span>
+        <span><kbd>▲</kbd>标记看完</span>
+        <span><kbd>▼</kbd><b id="k-down">选集</b></span>
+        <span><kbd>返回 / Esc</kbd>回首页</span>
+      </div>
     </div>
   </div>
   <div class="paused">已暂停，按 OK 继续</div>
@@ -200,11 +240,23 @@ function mins(sec) {
 var isSeries = function (v) { return v.parts > 1 && !v.page; };
 var lenLabel = function (v) { return isSeries(v) ? '共 ' + v.parts + ' 集' : mins(v.duration); };
 var who = function (v) { return v.orig || v.channel; };
-// 电视上方块不大，封面请 CDN 缩成小图，省内存也快
-var coverUrl = function (v) { return v.cover ? v.cover.replace(/@[^/]*$/, '') + '@480w_270h_1c.webp' : ''; };
-function embedUrl(v) {
+function isYT(v) {
+  return !!(v && (v.platform === 'youtube' || v.yt || (v.id && !v.id.startsWith('BV') && !v.id.startsWith('av'))));
+}
+function ytId(v) { return v.yt || v.id; }
+var coverUrl = function (v) {
+  if (isYT(v)) return v.cover || ('https://img.youtube.com/vi/' + ytId(v) + '/hqdefault.jpg');
+  return v.cover ? v.cover.replace(/@[^/]*$/, '') + '@480w_270h_1c.webp' : '';
+};
+function embedUrl(v, autoplay) {
+  var ap = autoplay !== false ? 1 : 0;
+  if (isYT(v)) {
+    return 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(ytId(v)) +
+      '?autoplay=' + ap + '&enablejsapi=1&rel=0&modestbranding=1&playsinline=1';
+  }
   var p = v.page > 1 ? '&p=' + v.page : '';
-  return 'https://player.bilibili.com/player.html?bvid=' + encodeURIComponent(v.id) + p + '&high_quality=1&danmaku=0&autoplay=1&as_wide=1';
+  return 'https://player.bilibili.com/player.html?bvid=' + encodeURIComponent(v.id) + p +
+    '&high_quality=1&danmaku=0&autoplay=' + ap + '&as_wide=1';
 }
 var toastTimer;
 function toast(msg, ms) {
@@ -305,7 +357,7 @@ function renderHome() {
     var track = home.querySelector('[data-row="' + (li + 1) + '"]');
     rows.push({el: track, items: [].slice.call(track.querySelectorAll('.card')), list: L.list, name: L.name, path: L.path, x: 0});
   });
-  $('#prog').innerHTML = '成长路线 已看 <b>' + doneCount(pathItems) + '</b> / ' + pathItems.length;
+  $('#prog').innerHTML = '🌟 探索金星：<b>' + doneCount(pathItems) + '</b> / ' + pathItems.length + ' 🏆';
   lazyImages(home);
   setFocus(Math.min(focus.r, rows.length - 1), focus.c, true);
 }
@@ -466,19 +518,43 @@ function stopPlayer() {
 }
 // 播放器在 B 站的 iframe 里，看不到真实进度，只能按时间估：
 // 看了七成就记为看完；放够时长（再多等 8 秒）就自动下一条——成长路线到一关结尾就停，不连着刷下一关
+var autoPlayNext = store.get('bilipicks-autoplay', true);
+function updateAutoPlayUI() {
+  var b = $('#btn-autoplay');
+  if (!b) return;
+  b.textContent = autoPlayNext ? '🔁 自动连播：开' : '⏸ 自动连播：关';
+  b.classList.toggle('active', autoPlayNext);
+}
 function secTick() {
   if (!P || P.paused || document.hidden) return;
   var v = P.list[P.idx];
   P.elapsed++;
   if (!v.duration) return;
-  if (!P.marked && !isDone(v.id) && P.elapsed >= v.duration * 0.7) { P.marked = true; setDone(v.id, true); toast('✓ 记为看完了'); }
-  if (isSeries(v) || P.elapsed < v.duration + 8) return;
-  var nx = P.list[P.idx + 1];
-  if (!nx) { P.paused = true; toast('这个列表看完了，按返回回首页', 6000); return; }
-  if (P.path && stageOf(nx) !== stageOf(v)) {
+  if (!P.marked && !isDone(v.id) && P.elapsed >= v.duration * 0.7) {
+    P.marked = true;
+    setDone(v.id, true);
+    toast('⭐ 太棒啦！点亮了一颗金星！', 2500);
+  }
+  if (P.elapsed < v.duration + 2) return;
+  if (!P.marked && !isDone(v.id)) {
+    P.marked = true;
+    setDone(v.id, true);
+  }
+  if (!autoPlayNext) {
     P.paused = true;
-    toast('🎉 第 ' + stageOf(v).no + ' 关看完了！休息一下，做做这一关的动手任务', 8000);
+    toast('本集播放完毕，点击「下一条」继续播放', 4000);
     return;
+  }
+  var nx = P.list[P.idx + 1];
+  if (!nx) {
+    P.paused = true;
+    toast('🏆 哇！整个路线全部看完了！', 6000);
+    return;
+  }
+  if (P.path && stageOf(nx) !== stageOf(v)) {
+    toast('🎉 第 ' + stageOf(v).no + ' 关通关！即将进入第 ' + stageOf(nx).no + ' 关 🚀', 3500);
+  } else {
+    toast('✨ 播放完成，即将进入下一集...', 2000);
   }
   go(1);
 }
@@ -706,6 +782,116 @@ loadData().then(function (data) {
   $('#msg').hidden = true;
   renderHome();
   checkUpd();
+
+// ---------- 鼠标与交互增强 ----------
+$('#home').addEventListener('click', function (e) {
+  var card = e.target.closest('.card');
+  if (card) {
+    var track = card.closest('.track');
+    if (track) {
+      var rIdx = +track.getAttribute('data-row');
+      var cIdx = +card.getAttribute('data-i');
+      var row = rows[rIdx];
+      if (row && row.list && row.list[cIdx]) {
+        cleanFocus();
+        setFocus(rIdx, cIdx);
+        play(row.list, cIdx, row.path ? '成长路线' : row.name, row.path, row.path ? pathItems.indexOf(row.list[cIdx]) : -1);
+        return;
+      }
+    }
+  }
+  var big = e.target.closest('.tile.big');
+  if (big) {
+    var v = nextUndone();
+    play(pathItems, pathItems.indexOf(v), '成长路线', true);
+    return;
+  }
+  var stage = e.target.closest('.tile.stage');
+  if (stage) {
+    var stNo = +stage.getAttribute('data-stage');
+    var st = stages[stNo - 1];
+    if (st && st.vids.length) {
+      var first = st.vids.filter(function (x) { return !isDone(x.id); })[0] || st.vids[0];
+      play(pathItems, pathItems.indexOf(first), '成长路线', true);
+    }
+    return;
+  }
+  var dice = e.target.closest('.tile.dice');
+  if (dice) { homeKey('ok'); return; }
+  var gear = e.target.closest('.tile.gear');
+  if (gear) { openPanel(); return; }
+});
+
+// 鼠标滚轮在首页上下翻动
+window.addEventListener('wheel', function (e) {
+  if (P || panelOpen) return;
+  if (e.deltaY > 25) {
+    if (focus.r < rows.length - 1) {
+      cleanFocus();
+      setFocus(focus.r + 1, rowCol[focus.r + 1] || 0);
+    }
+  } else if (e.deltaY < -25) {
+    if (focus.r > 0) {
+      cleanFocus();
+      setFocus(focus.r - 1, rowCol[focus.r - 1] || 0);
+    }
+  }
+}, {passive: true});
+
+// 选集条点击
+$('#strip-track').addEventListener('click', function (e) {
+  var card = e.target.closest('.card');
+  if (card) {
+    var c = +card.getAttribute('data-i');
+    closeStrip();
+    if (c !== P.idx) {
+      P.idx = c;
+      showVideo(0);
+    } else {
+      wake();
+    }
+  }
+});
+
+// 播放器按钮事件
+$('#btn-back-home').addEventListener('click', function () { playerKey('back'); });
+$('#btn-float-back').addEventListener('click', function () { playerKey('back'); });
+$('#btn-prev').addEventListener('click', function () { go(-1); });
+$('#btn-playpause').addEventListener('click', function () { playerKey('ok'); });
+$('#btn-mark').addEventListener('click', function () { playerKey('up'); });
+$('#btn-strip').addEventListener('click', function () { openStrip(); });
+$('#btn-next').addEventListener('click', function () { go(1); });
+$('#btn-autoplay').addEventListener('click', function () {
+  autoPlayNext = !autoPlayNext;
+  store.set('bilipicks-autoplay', autoPlayNext);
+  updateAutoPlayUI();
+  toast(autoPlayNext ? '已开启自动连播 🔁' : '已关闭自动连播 ⏸');
+});
+$('#player').addEventListener('mousemove', function () { wake(4500); });
+
+// 监听 YouTube 播放器结束消息
+window.addEventListener('message', function (e) {
+  if (!P) return;
+  try {
+    var data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (data && (data.event === 'onStateChange' || typeof data.info === 'number')) {
+      if (data.info === 0) {
+        if (!P.marked && !isDone(P.list[P.idx].id)) {
+          P.marked = true;
+          setDone(P.list[P.idx].id, true);
+        }
+        if (autoPlayNext) {
+          toast('🎉 播放完毕，正在进入下一集...', 2500);
+          setTimeout(function () { go(1); }, 1000);
+        } else {
+          toast('本集播放完毕，点击「下一条」继续播放', 3500);
+        }
+      }
+    }
+  } catch (err) {}
+});
+updateAutoPlayUI();
+
 }).catch(function () {
   $('#msg').innerHTML = '<b>没加载出来</b>检查一下网络，按 OK 重试';
   window.tvKey = function (k) { if (k === 'ok') location.reload(); return k === 'back' ? 'exit' : ''; };
