@@ -235,7 +235,7 @@ kbd{font:inherit;font-weight:700;font-size:12.5px;padding:1px 7px;border-radius:
 .feed{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
 .feed::-webkit-scrollbar{display:none}
 .slide{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:12px 24px 20px;max-width:1280px;margin:0 auto;align-content:center;align-items:stretch}
-.player{position:relative;aspect-ratio:16/9;width:100%;height:100%;border-radius:18px;overflow:hidden;background:#0b1018;box-shadow:var(--shadow)}
+.player{position:relative;aspect-ratio:16/9;width:100%;border-radius:18px;overflow:hidden;background:#0b1018;box-shadow:var(--shadow)}
 .player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;display:block}
 .poster img{opacity:.92}
@@ -408,6 +408,7 @@ body.tv .tv-bar{position:fixed;left:0;right:0;bottom:0;height:60px;z-index:61;di
 <header class="top" id="top">
   <a class="logo" href="./" id="logo" aria-label="BiliPicks 首页"><span class="mark">▶</span><span class="logo-t">BiliPicks Kids 🎈</span></a>
   <nav class="nav" id="nav" aria-label="主导航"></nav>
+  <button type="button" class="btn sm" id="btn-top-novpn" style="margin-right:0.4rem;font-size:0.8rem;padding:0.25rem 0.6rem" title="点击切换免梯直连/全球模式">🇨🇳 免梯直连</button>
   <label class="search">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="search" type="search" placeholder="搜视频、UP 主、分类" aria-label="搜索" enterkeyhint="search">
@@ -434,7 +435,7 @@ body.tv .tv-bar{position:fixed;left:0;right:0;bottom:0;height:60px;z-index:61;di
       <div class="kpis" id="about-kpis"></div>
       <h2 class="sec">怎么用</h2>
       <ul>
-        <li><strong>路线</strong>：「4岁半小小科学家成长路线」一共 5 关。精选适合4岁半专注力与认知阶段的趣味短片，每一关最后配有生动有趣的亲子动手小任务。</li>
+        <li><strong>路线</strong>：「4岁半小探索家成长路线」一共 6 关：奇妙大自然与生命奥秘、地球探秘与宇宙漫游纪录片、恐龙大世界、消防车与复兴号高铁、超酷机器人与科技伙伴、BBC积木魔法与英语磨耳朵。每一关最后配有生动有趣的亲子动手小任务与小实验。</li>
         <li><strong>播放</strong>：一屏一条视频，滑到哪条就播哪条。不想自动播，点顶上的「自动播放」关掉，之后要点封面才播。播放器是 B 站官方的站外播放器，没有改动。</li>
         <li><strong>看完了</strong>：看完一条点「✓ 看完了」，路线会记进度。</li>
         <li><strong>去 B 站看高清</strong>：B 站限制站外播放器最高 480P，点「看完了」旁边这个按钮到 B 站播放，登录后可看 1080P。</li>
@@ -469,6 +470,7 @@ body.tv .tv-bar{position:fixed;left:0;right:0;bottom:0;height:60px;z-index:61;di
         <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
       </button>
       <div class="feed-ctx"><b id="feed-name"></b><span id="feed-pos"></span></div>
+      <button type="button" class="btn sm" id="btn-novpn" title="点击切换免梯直连/全球模式">🇨🇳 免梯直连</button>
       <button type="button" class="btn sm wide-only" id="btn-prev" title="快捷键 K">上一条</button>
       <button type="button" class="btn sm wide-only" id="btn-next" title="快捷键 J">下一条</button>
       <button type="button" class="btn sm auto-btn" id="btn-auto" aria-pressed="true">自动播放</button>
@@ -596,8 +598,15 @@ const lenLabel = v => isSeries(v) ? `共 ${v.parts} 集` : mins(v.duration);
 // 老数据里有写「无」「无明显问题」的家长提示，不显示
 const cautionOf = v => (v.caution && !/^无(明显问题)?$/.test(v.caution.trim())) ? v.caution : '';
 const who = v => v.orig || v.channel;
-const isYT = v => !!(v && (v.platform === 'youtube' || v.yt || (v.id && !v.id.startsWith('BV') && !v.id.startsWith('av'))));
+let noVpnMode = store.get('bilipicks-novpn', true);
+const isYT = v => {
+  if (!v) return false;
+  const hasBili = !!(v.bvid || (v.id && (v.id.startsWith('BV') || v.id.startsWith('av'))));
+  if (noVpnMode && hasBili) return false;
+  return !!(v.platform === 'youtube' || v.yt || (!hasBili));
+};
 const ytId = v => v.yt || v.id;
+const biliId = v => v.bvid || v.id;
 const cover = v => {
   const c = isYT(v) ? (v.cover || `https://img.youtube.com/vi/${ytId(v)}/hqdefault.jpg`) : v.cover;
   return c ? `<img class="cover" src="${esc(c)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '';
@@ -607,8 +616,28 @@ function embedUrl(v, autoplay) {
   if (isYT(v)) {
     return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(ytId(v))}?autoplay=${autoplay ? 1 : 0}&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`;
   }
+  const id = biliId(v);
   const p = v.page > 1 ? `&p=${v.page}` : '';
-  return `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(v.id)}${p}&high_quality=1&danmaku=0&autoplay=${autoplay ? 1 : 0}&as_wide=1`;
+  return `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(id)}${p}&high_quality=1&danmaku=0&autoplay=${autoplay ? 1 : 0}&as_wide=1`;
+}
+function updateNoVpnUI() {
+  const label = noVpnMode ? '🇨🇳 免梯直连' : '🌐 全球模式';
+  const tip = noVpnMode ? '免梯直连中 (B站源，国内100%顺畅)' : '全球模式中 (YouTube 4K优先，需翻墙)';
+  const b1 = $('#btn-novpn');
+  if (b1) { b1.textContent = label; b1.title = tip; }
+  const b2 = $('#btn-top-novpn');
+  if (b2) { b2.textContent = label; b2.title = tip; }
+}
+function toggleNoVpn() {
+  noVpnMode = !noVpnMode;
+  store.set('bilipicks-novpn', noVpnMode);
+  updateNoVpnUI();
+  toast(noVpnMode ? '已切换为：🇨🇳 国内免梯直连 (100%顺畅播放)' : '已切换为：🌐 全球模式 (优先播放 YouTube 4K)');
+  const activeSlide = $('.slide.active');
+  if (activeSlide && activeSlide.dataset.i != null) {
+    const v = feedList[+activeSlide.dataset.i];
+    if (v) mount(activeSlide, v, true);
+  }
 }
 let toastTimer;
 function toast(msg) {
@@ -1244,6 +1273,11 @@ $('#btn-next').onclick = () => step(1);
 $('#btn-list').onclick = openSheet;
 $('#btn-auto').onclick = toggleAuto;
 paintAuto();
+const bNoVpn = $('#btn-novpn');
+if (bNoVpn) bNoVpn.onclick = toggleNoVpn;
+const bTopNoVpn = $('#btn-top-novpn');
+if (bTopNoVpn) bTopNoVpn.onclick = toggleNoVpn;
+updateNoVpnUI();
 $('#btn-tv').onclick = () => setTV(true);
 $('#tv-prev').onclick = () => step(-1);
 $('#tv-next').onclick = () => step(1);

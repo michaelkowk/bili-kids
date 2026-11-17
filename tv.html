@@ -159,7 +159,7 @@ h1,h2,h3,p{margin:0}
 <div class="bg"></div>
 <header class="top">
   <div class="logo"><i>▶</i><b>BiliPicks Kids</b><span id="sub"></span></div>
-  <div class="top-r"><span class="prog" id="prog"></span><span class="clock" id="clock"></span></div>
+  <div class="top-r"><button type="button" class="ctrl-btn" id="top-netmode" style="height:2rem;font-size:0.9rem;padding:0 0.8rem;margin-right:1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);border-radius:999px;cursor:pointer;">🇨🇳 免梯直连</button><span class="prog" id="prog"></span><span class="clock" id="clock"></span></div>
 </header>
 <main class="home" id="home"></main>
 <div class="msg" id="msg"><b>BiliPicks</b>正在加载…</div>
@@ -184,6 +184,7 @@ h1,h2,h3,p{margin:0}
         <button class="ctrl-btn" id="btn-strip">📑 选集</button>
         <button class="ctrl-btn" id="btn-next">⏭ 下一条</button>
         <button class="ctrl-btn active" id="btn-autoplay">🔁 自动连播：开</button>
+        <button class="ctrl-btn" id="btn-netmode-player">🇨🇳 免梯直连</button>
       </div>
       <div class="keys">
         <span><kbd>◀</kbd><kbd>▶</kbd><b id="k-lr">上一条 / 下一条</b></span>
@@ -200,9 +201,10 @@ h1,h2,h3,p{margin:0}
 <section class="panel" id="panel" hidden>
   <div class="panel-box">
     <h2>设置</h2>
-    <div class="tile pitem f"><b id="p-upd-t">应用更新</b><small id="p-upd-s"></small><i class="reddot" id="p-upd-dot" hidden></i></div>
+    <div class="tile pitem f" id="p-netmode" tabindex="0" style="margin-bottom:14px;cursor:pointer;"><b id="p-net-t">播放源：🇨🇳 国内免梯直连 (B站优先)</b><small id="p-net-s">国内电视推荐：100%无需VPN，顺畅播放所有精选视频；海外或软路由可按 OK 切换全球模式</small></div>
+    <div class="tile pitem" id="p-upd-item" tabindex="0"><b id="p-upd-t">应用更新</b><small id="p-upd-s"></small><i class="reddot" id="p-upd-dot" hidden></i></div>
     <p class="pnote" id="p-note"></p>
-    <p class="phint">OK 确认 · 返回键关闭</p>
+    <p class="phint">按 OK 键切换模式 / 确认 · 返回键关闭</p>
   </div>
 </section>
 <div class="toast" id="toast"></div>
@@ -240,10 +242,15 @@ function mins(sec) {
 var isSeries = function (v) { return v.parts > 1 && !v.page; };
 var lenLabel = function (v) { return isSeries(v) ? '共 ' + v.parts + ' 集' : mins(v.duration); };
 var who = function (v) { return v.orig || v.channel; };
+var noVpnMode = store.get('bilipicks-novpn', true);
 function isYT(v) {
-  return !!(v && (v.platform === 'youtube' || v.yt || (v.id && !v.id.startsWith('BV') && !v.id.startsWith('av'))));
+  if (!v) return false;
+  var hasBili = !!(v.bvid || (v.id && (v.id.startsWith('BV') || v.id.startsWith('av'))));
+  if (noVpnMode && hasBili) return false;
+  return !!(v.platform === 'youtube' || v.yt || (!hasBili));
 }
 function ytId(v) { return v.yt || v.id; }
+function biliId(v) { return v.bvid || v.id; }
 var coverUrl = function (v) {
   if (isYT(v)) return v.cover || ('https://img.youtube.com/vi/' + ytId(v) + '/hqdefault.jpg');
   return v.cover ? v.cover.replace(/@[^/]*$/, '') + '@480w_270h_1c.webp' : '';
@@ -254,9 +261,28 @@ function embedUrl(v, autoplay) {
     return 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(ytId(v)) +
       '?autoplay=' + ap + '&enablejsapi=1&rel=0&modestbranding=1&playsinline=1';
   }
+  var id = biliId(v);
   var p = v.page > 1 ? '&p=' + v.page : '';
-  return 'https://player.bilibili.com/player.html?bvid=' + encodeURIComponent(v.id) + p +
+  return 'https://player.bilibili.com/player.html?bvid=' + encodeURIComponent(id) + p +
     '&high_quality=1&danmaku=0&autoplay=' + ap + '&as_wide=1';
+}
+function updateTvNoVpnUI() {
+  var label = noVpnMode ? '🇨🇳 免梯直连' : '🌐 全球模式';
+  var bTop = $('#top-netmode');
+  if (bTop) bTop.textContent = label;
+  var bPlayer = $('#btn-netmode-player');
+  if (bPlayer) bPlayer.textContent = label;
+  var pNetT = $('#p-net-t');
+  if (pNetT) pNetT.textContent = '播放源：' + (noVpnMode ? '🇨🇳 国内免梯直连 (B站优先)' : '🌐 全球模式 (YouTube 4K优先)');
+}
+function toggleTvNoVpn() {
+  noVpnMode = !noVpnMode;
+  store.set('bilipicks-novpn', noVpnMode);
+  updateTvNoVpnUI();
+  toast(noVpnMode ? '已切换为：🇨🇳 国内免梯直连 (无需VPN，100%顺畅)' : '已切换为：🌐 全球模式 (优先播放 YouTube 4K)', 2800);
+  if (P && P.list && P.list[P.idx]) {
+    showVideo(0);
+  }
 }
 var toastTimer;
 function toast(msg, ms) {
@@ -737,15 +763,30 @@ function checkUpd() {
     if (!upd.busy) paintIdle();
   }).catch(function () { if (!upd.busy) paintIdle(); });
 }
+var panelItem = 0; // 0: 网络模式, 1: 检查更新
+function updatePanelFocus() {
+  var m = $('#p-netmode'), u = $('#p-upd-item');
+  if (m) m.classList.toggle('f', panelItem === 0);
+  if (u) u.classList.toggle('f', panelItem === 1);
+}
 function openPanel() {
   panelOpen = true;
+  panelItem = 0;
+  updateTvNoVpnUI();
+  updatePanelFocus();
   if (!upd.busy) paintIdle();
   $('#panel').hidden = false;
 }
 function closePanel() { panelOpen = false; $('#panel').hidden = true; }
 function panelKey(k) {
   if (k === 'back' || k === 'menu') { closePanel(); return; }
+  if (k === 'up') { panelItem = 0; updatePanelFocus(); return; }
+  if (k === 'down') { panelItem = 1; updatePanelFocus(); return; }
   if (k !== 'ok') return;
+  if (panelItem === 0) {
+    toggleTvNoVpn();
+    return;
+  }
   if (APP) { doUpdate(); return; }
   toast(IN_APP ? '这一版要先用 U 盘或 adb 装一次新版' : '在电视上装 BiliPicks 应用才能用', 5000);
 }
@@ -867,6 +908,23 @@ $('#btn-autoplay').addEventListener('click', function () {
   updateAutoPlayUI();
   toast(autoPlayNext ? '已开启自动连播 🔁' : '已关闭自动连播 ⏸');
 });
+var bTopNet = $('#top-netmode');
+if (bTopNet) bTopNet.addEventListener('click', toggleTvNoVpn);
+var bPlayerNet = $('#btn-netmode-player');
+if (bPlayerNet) bPlayerNet.addEventListener('click', toggleTvNoVpn);
+var pNet = $('#p-netmode');
+if (pNet) pNet.addEventListener('click', function () {
+  panelItem = 0;
+  updatePanelFocus();
+  toggleTvNoVpn();
+});
+var pUpd = $('#p-upd-item');
+if (pUpd) pUpd.addEventListener('click', function () {
+  panelItem = 1;
+  updatePanelFocus();
+  if (APP) { doUpdate(); return; }
+  toast(IN_APP ? '这一版要先用 U 盘或 adb 装一次新版' : '在电视上装 BiliPicks 应用才能用', 5000);
+});
 $('#player').addEventListener('mousemove', function () { wake(4500); });
 
 // 监听 YouTube 播放器结束消息
@@ -891,6 +949,7 @@ window.addEventListener('message', function (e) {
   } catch (err) {}
 });
 updateAutoPlayUI();
+updateTvNoVpnUI();
 
 }).catch(function () {
   $('#msg').innerHTML = '<b>没加载出来</b>检查一下网络，按 OK 重试';
