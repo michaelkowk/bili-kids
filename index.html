@@ -235,7 +235,22 @@ kbd{font:inherit;font-weight:700;font-size:12.5px;padding:1px 7px;border-radius:
 .feed{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
 .feed::-webkit-scrollbar{display:none}
 .slide{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;padding:6px 24px 20px;max-width:1280px;margin:0 auto;align-items:start}
-.player{position:relative;aspect-ratio:16/9;width:min(100%,calc((100dvh - var(--top-h) - 78px) * 16 / 9));justify-self:center;border-radius:18px;overflow:hidden;background:#0b1018;box-shadow:var(--shadow)}
+/* 左侧播放器与下方介绍卡片（填充宽屏留白） */
+.player-pane{height:100%;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.player{position:relative;aspect-ratio:16/9;width:100%;flex:none;border-radius:18px;overflow:hidden;background:#0b1018;box-shadow:var(--shadow)}
+.player-intro{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 20px;box-shadow:var(--shadow);overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.player-intro::-webkit-scrollbar{width:5px}
+.player-intro::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.intro-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:none}
+.intro-badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:color-mix(in oklab,var(--sun) 30%,var(--surface));color:var(--warn)}
+.intro-stage-pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:color-mix(in oklab,var(--h) 15%,var(--surface));color:color-mix(in oklab,var(--h) 70%,var(--ink))}
+.intro-headline{font-size:16px;font-weight:800;color:var(--ink);margin:0}
+.intro-reason{font-size:13.5px;line-height:1.65;color:var(--muted);margin:0}
+.intro-box{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.65}
+.caution-box{background:color-mix(in oklab,var(--sun) 14%,var(--surface));color:var(--warn);border:1px solid color-mix(in oklab,var(--sun) 30%,var(--line))}
+.caution-box b{color:var(--warn);font-weight:800}
+.mission-box{background:color-mix(in oklab,var(--h) 10%,var(--surface));color:var(--ink);border:1px solid color-mix(in oklab,var(--h) 25%,var(--line))}
+.mission-box b{color:color-mix(in oklab,var(--h) 80%,var(--ink));font-weight:800}
 .player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .poster{position:absolute;inset:0;width:100%;height:100%;display:block}
 .poster img{opacity:.92}
@@ -329,6 +344,8 @@ body.tv .tv-bar{position:fixed;left:0;right:0;bottom:0;height:60px;z-index:61;di
   .wide-only{display:none!important}
   .touch{display:inline}
   .slide{display:flex;flex-direction:column;gap:0;padding:0;align-items:stretch}
+  .player-pane{height:auto;overflow:visible;gap:0}
+  .player-intro{display:none}
   .player{flex:none;width:100%;border-radius:0;box-shadow:none}
   .info{flex:1;height:auto;border:0;border-radius:0;background:var(--bg)}
   .info-scroll{padding:14px 16px 6px}
@@ -844,7 +861,19 @@ function slideHTML(v, i) {
   ].join('');
   const up = `<a href="${esc(v.channelUrl || v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.channel)}</a>`;
   return `<article class="slide" data-i="${i}" style="--h:${st ? st.hue : 'var(--accent)'}">
-    <div class="player">${posterHTML(v)}</div>
+    <div class="player-pane">
+      <div class="player">${posterHTML(v)}</div>
+      <div class="player-intro">
+        <div class="intro-bar">
+          <span class="intro-badge">🌟 4岁半启蒙导读</span>
+          ${st ? `<span class="intro-stage-pill" style="--h:${st.hue}">${esc(st.icon || '')} ${esc(st.name)}</span>` : ''}
+        </div>
+        ${pi ? `<h3 class="intro-headline">${esc(pi.note)}</h3>` : ''}
+        ${v.reason ? `<p class="intro-reason">${esc(v.reason)}</p>` : ''}
+        ${c ? `<div class="intro-box caution-box"><b>💡 亲子观察与互动：</b>${esc(c)}</div>` : ''}
+        ${st && st.mission ? `<div class="intro-box mission-box"><b>🎈 亲子小任务【${esc(st.mission.label)}】：</b>${esc(st.mission.text)}</div>` : ''}
+      </div>
+    </div>
     <div class="info">
       <div class="info-scroll">
         <div class="badges">${badges}</div>
@@ -871,6 +900,45 @@ function paintDone(slide, v, pop) {
   b.title = on ? '再点一次取消' : '标记为看完，路线会记进度';
   if (pop) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
 }
+let watchTimer, watchElapsed = 0;
+function startWatchTicker(v) {
+  clearInterval(watchTimer);
+  watchElapsed = 0;
+  if (!v || !v.duration) return;
+  watchTimer = setInterval(() => {
+    if (state.view !== 'watch' || document.hidden) return;
+    watchElapsed++;
+    if (!isDone(v.id) && watchElapsed >= v.duration * 0.7) {
+      setDone(v.id, true);
+      const slide = slideEl(state.idx);
+      if (slide) paintDone(slide, v, true);
+      toast('⭐ 太棒啦！已看完并点亮金星！');
+    }
+    if (autoplay && watchElapsed >= v.duration + 1) {
+      clearInterval(watchTimer);
+      if (!isDone(v.id)) {
+        setDone(v.id, true);
+        const slide = slideEl(state.idx);
+        if (slide) paintDone(slide, v, true);
+      }
+      const nx = feedList[state.idx + 1];
+      if (!nx) {
+        toast('🏆 哇！整个路线全部看完了！', 5000);
+        return;
+      }
+      const curSt = stageOf(v), nxSt = stageOf(nx);
+      if (curSt && nxSt && curSt.no !== nxSt.no) {
+        toast('🎉 第 ' + curSt.no + ' 关通关！进入第 ' + nxSt.no + ' 关 🚀', 4000);
+      } else {
+        toast('✨ 播放完成，即将进入下一集精选...', 2500);
+      }
+      setTimeout(() => {
+        goTo(state.idx + 1, {play: true});
+      }, 1000);
+    }
+  }, 1000);
+}
+
 function mount(slide, v, autoplay) {
   const box = $('.player', slide);
   if ($('iframe', box)) return;
@@ -883,11 +951,42 @@ function mount(slide, v, autoplay) {
   f.src = embedUrl(v, autoplay);
   box.innerHTML = '';
   box.appendChild(f);
+  startWatchTicker(v);
 }
 function unmount(slide) {
+  clearInterval(watchTimer);
   const box = $('.player', slide);
   if ($('iframe', box)) box.innerHTML = posterHTML(feedList[+slide.dataset.i]);
 }
+
+// 监听 YouTube 结束消息
+window.addEventListener('message', e => {
+  if (state.view !== 'watch') return;
+  try {
+    const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (data && (data.event === 'onStateChange' || typeof data.info === 'number')) {
+      if (data.info === 0) { // ENDED
+        const cur = feedList[state.idx];
+        if (cur && !isDone(cur.id)) {
+          setDone(cur.id, true);
+          const slide = slideEl(state.idx);
+          if (slide) paintDone(slide, cur, true);
+        }
+        if (autoplay) {
+          const nx = feedList[state.idx + 1];
+          if (!nx) {
+            toast('🏆 哇！整个路线全部看完了！', 5000);
+            return;
+          }
+          toast('🎉 播放完毕，正在进入下一集精选...', 2500);
+          setTimeout(() => {
+            goTo(state.idx + 1, {play: true});
+          }, 1000);
+        }
+      }
+    }
+  } catch {}
+});
 // 滑到就播：默认开，手机开了「省流量」时默认关；选择记在本机
 let autoplay = store.get(AUTO_KEY, !(navigator.connection && navigator.connection.saveData));
 let autoTimer;
